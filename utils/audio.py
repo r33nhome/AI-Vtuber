@@ -995,8 +995,13 @@ class Audio:
 
                 play(audio)
                 logger.info(f"elevenlabs合成内容：【{message['content']}】")
+                message["result"] = {
+                    "code": 200,
+                    "msg": "合成成功",
+                    "audio_path": None
+                }
 
-                return
+                return message
             elif message["tts_type"] == "genshinvoice_top":
                 voice_tmp_path = await self.my_tts.genshinvoice_top_api(message["content"])
             elif message["tts_type"] == "tts_ai_lab_top":
@@ -1325,11 +1330,11 @@ class Audio:
             voice_tmp_path = resp_json["result"]["audio_path"]
         else:
             voice_tmp_path = None
-        
-        if voice_tmp_path is None:
+
+        if voice_tmp_path is None and message["tts_type"] != "elevenlabs":
             logger.error(f"{message['tts_type']}合成失败，请排查服务端是否启动、是否正常，配置、网络等问题。如果排查后都没有问题，可能是接口改动导致的兼容性问题，可以前往官方仓库提交issue，传送门：https://github.com/Ikaros-521/AI-Vtuber/issues\n如果是GSV 400错误，请确认参考音频和参考文本是否正确，或替换参考音频进行尝试")
             self.abnormal_alarm_handle("tts")
-            
+
             return False
         
         logger.info(f"[{message['tts_type']}]合成成功，合成内容：【{message['content']}】，音频存储在 {voice_tmp_path}")
@@ -1993,23 +1998,8 @@ class Audio:
             voice_tmp_path = await self.my_tts.edge_tts_api(data)
 
         elif audio_synthesis_type == "elevenlabs":
-            return
-        
-            try:
-                # 如果配置了密钥就设置上0.0
-                if message["data"]["elevenlabs_api_key"] != "":
-                    set_api_key(message["data"]["elevenlabs_api_key"])
-
-                audio = generate(
-                    text=message["content"],
-                    voice=message["data"]["elevenlabs_voice"],
-                    model=message["data"]["elevenlabs_model"]
-                )
-
-                # play(audio)
-            except Exception as e:
-                logger.error(traceback.format_exc())
-                return
+            logger.error("elevenlabs暂不支持本地音频合成配置")
+            voice_tmp_path = ""
         elif audio_synthesis_type == "bark_gui":
             data = {
                 "api_ip_port": bark_gui["api_ip_port"],
